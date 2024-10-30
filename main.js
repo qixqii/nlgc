@@ -127,7 +127,6 @@ const createNewBranch = (prefix, username, commit, detail, time) => {
 
 // 主函数
 async function main() {
-  console.log("Starting questions...");
   const prefix = await getPrefix();
   const username = await getUserName();
   const commit = await getCurrentBranchLastCommit();
@@ -135,7 +134,6 @@ async function main() {
   const time = await getCurrentTime();
 
   // 输出最终结果
-  console.log("\nFinal Results:");
   console.log(`Prefix: ${prefix}`);
   console.log(`Username: ${username}`);
   console.log(`Commit: ${commit}`);
