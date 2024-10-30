@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import inquirer from "inquirer";
+import { execSync } from "child_process";
 
 // 1. 定义 功能
 // [‘feature’, ‘release’, ‘hofix’]
@@ -17,6 +18,13 @@ import inquirer from "inquirer";
 // 总的环境list [‘aws’, ‘sbux’, ‘chanel’, ‘nana’]
 
 // release/username/commit/release_projectname_20220808
+
+const prefixChoices = [
+  { name: "feature  (功能开发)", value: "feature" },
+  { name: "release  (集成测试)", value: "release" },
+  { name: "hotfix   (问题修复)", value: "hotfix" },
+  { name: "自己输入", value: "custom" },
+];
 
 // 封装的通用手动输入逻辑
 async function handleManualInput(questionName, message) {
@@ -37,16 +45,11 @@ async function getPrefix() {
       type: "list",
       name: "prefix",
       message: "请选择分支前缀",
-      choices: [
-        "feature  (功能开发)",
-        "release  (集成测试)",
-        "hotfix   (问题修复)",
-        "自己输入",
-      ],
+      choices: prefixChoices,
     },
   ]);
 
-  if (answer1.prefix === "自己输入") {
+  if (answer1.prefix === "custom") {
     const customPrefixInput = await handleManualInput(
       "customPrefixInput",
       "请手动输入前缀："
@@ -86,12 +89,40 @@ async function getUserName() {
 
 // commit
 const getCurrentBranchLastCommit = () => {
-  const { execSync } = require("child_process");
   const branch = execSync("git rev-parse --abbrev-ref HEAD").toString().trim();
   const commit = execSync(`git log --pretty=format:'%h' -n 1 ${branch}`)
     .toString()
     .trim();
   return commit.slice(0, 8);
+};
+
+// detail
+async function getBranchDetail(prefix) {
+  const customDetailInput = await handleManualInput(
+    "customDetailInput",
+    "请输入分支功能描述，不需要输入时间哦："
+  );
+  console.log(`你输入的分支功能描述: ${customDetailInput}`);
+  return customDetailInput;
+}
+
+// time
+const getCurrentTime = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const timeStr = `${year}${month.toString().padStart(2, "0")}${day
+    .toString()
+    .padStart(2, "0")}`;
+  return timeStr;
+};
+
+// 创建新分支
+const createNewBranch = (prefix, username, commit, detail, time) => {
+  const branchName = `${prefix}/${username}/${commit}/${detail}_${time}`;
+  execSync(`git checkout -b ${branchName}`);
+  console.log(`New branch created: ${branchName}`);
 };
 
 // 主函数
@@ -100,12 +131,18 @@ async function main() {
   const prefix = await getPrefix();
   const username = await getUserName();
   const commit = await getCurrentBranchLastCommit();
+  const detail = await getBranchDetail(prefix);
+  const time = await getCurrentTime();
 
   // 输出最终结果
   console.log("\nFinal Results:");
   console.log(`Prefix: ${prefix}`);
   console.log(`Username: ${username}`);
   console.log(`Commit: ${commit}`);
+  console.log(`Detail: ${detail}`);
+  console.log(`Time: ${time}`);
+
+  createNewBranch(prefix, username, commit, detail, time);
 }
 
 // 运行主函数
