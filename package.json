@@ -1,0 +1,13 @@
+{
+  "name": "nlgc",
+  "version": "1.0.1",
+  "description": "A CLI tool for git checkout branch",
+  "main": "main.js",
+  "type": "module",
+  "bin": {
+    "nlgc": "main.js"
+  },
+  "dependencies": {
+    "inquirer": "^9.0.0"
+  }
+}
