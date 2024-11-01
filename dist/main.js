@@ -93,9 +93,29 @@ const getCurrentBranchLastCommit = () => {
 
 // detail
 async function getBranchDetail(prefix) {
-  const customDetailInput = await handleManualInput("customDetailInput", "请输入分支功能描述，不需要输入时间哦：");
-  console.log(`你输入的分支功能描述: ${customDetailInput}`);
-  return customDetailInput;
+  console.log("prefix", prefix);
+  if (["feature"].includes(prefix)) {
+    const customDetailInput = await handleManualInput("customDetailInput", "请输入分支功能描述，不需要输入时间哦：");
+    console.log(`你输入的分支功能描述: ${customDetailInput}`);
+    return customDetailInput;
+  } else if (["release"].includes(prefix)) {
+    const detailAnswer = await inquirer.prompt([{
+      type: "list",
+      name: "detail",
+      message: "请选择分支类型",
+      choices: ["master", "ent_sbux", "ent_yum", "ent_sgp", "ent_shangqi", "saas_chanel", "手动输入"]
+    }]);
+
+    // 如果选择了“手动输入”，进入输入模式
+    if (detailAnswer.detail === "手动输入") {
+      const customDetailInput = await handleManualInput("customDetailInput", "请输入分支类型：");
+      console.log(`你输入的分支类型: ${customDetailInput}`);
+      return customDetailInput; // 返回用户输入的值
+    } else {
+      console.log(`你选择的分支类型: ${detailAnswer.detail}`);
+      return detailAnswer.detail; // 返回选择的值
+    }
+  }
 }
 
 // time

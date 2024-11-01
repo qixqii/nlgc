@@ -1,6 +1,6 @@
 {
   "name": "nlgc",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "A CLI tool for git create new branch",
   "main": "main.js",
   "bin": {
