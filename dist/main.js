@@ -1,7 +1,10 @@
 #!/usr/bin/env node
+"use strict";
 
 const inquirer = require("inquirer");
-const { execSync } = require("child_process");
+const {
+  execSync
+} = require("child_process");
 
 // 1. 定义 功能
 // [‘feature’, ‘release’, ‘hofix’]
@@ -19,41 +22,40 @@ const { execSync } = require("child_process");
 
 // release/username/commit/release_projectname_20220808
 
-const prefixChoices = [
-  { name: "feature  (功能开发)", value: "feature" },
-  { name: "release  (集成测试)", value: "release" },
-  { name: "hotfix   (问题修复)", value: "hotfix" },
-  { name: "自己输入", value: "custom" },
-];
+const prefixChoices = [{
+  name: "feature  (功能开发)",
+  value: "feature"
+}, {
+  name: "release  (集成测试)",
+  value: "release"
+}, {
+  name: "hotfix   (问题修复)",
+  value: "hotfix"
+}, {
+  name: "自己输入",
+  value: "custom"
+}];
 
 // 封装的通用手动输入逻辑
 async function handleManualInput(questionName, message) {
-  const answer = await inquirer.prompt([
-    {
-      type: "input",
-      name: questionName,
-      message,
-    },
-  ]);
+  const answer = await inquirer.prompt([{
+    type: "input",
+    name: questionName,
+    message
+  }]);
   return answer[questionName];
 }
 
 // prefix
 async function getPrefix() {
-  const answer1 = await inquirer.prompt([
-    {
-      type: "list",
-      name: "prefix",
-      message: "请选择分支前缀",
-      choices: prefixChoices,
-    },
-  ]);
-
+  const answer1 = await inquirer.prompt([{
+    type: "list",
+    name: "prefix",
+    message: "请选择分支前缀",
+    choices: prefixChoices
+  }]);
   if (answer1.prefix === "custom") {
-    const customPrefixInput = await handleManualInput(
-      "customPrefixInput",
-      "请手动输入前缀："
-    );
+    const customPrefixInput = await handleManualInput("customPrefixInput", "请手动输入前缀：");
     console.log(`你输入的前缀: ${customPrefixInput}`);
     return customPrefixInput;
   } else {
@@ -64,21 +66,16 @@ async function getPrefix() {
 
 // username
 async function getUserName() {
-  const answer2 = await inquirer.prompt([
-    {
-      type: "list",
-      name: "username",
-      message: "请选择用户名",
-      choices: ["my", "wy", "xxl", "qxq", "zl", "手动输入"],
-    },
-  ]);
+  const answer2 = await inquirer.prompt([{
+    type: "list",
+    name: "username",
+    message: "请选择用户名",
+    choices: ["my", "wy", "xxl", "qxq", "zl", "手动输入"]
+  }]);
 
   // 如果选择了“手动输入”，进入输入模式
   if (answer2.question2 === "手动输入") {
-    const customNameInput = await handleManualInput(
-      "customNameInput",
-      "请输入用户名："
-    );
+    const customNameInput = await handleManualInput("customNameInput", "请输入用户名：");
     console.log(`你输入的用户名: ${customNameInput}`);
     return customNameInput; // 返回用户输入的值
   } else {
@@ -90,18 +87,13 @@ async function getUserName() {
 // commit
 const getCurrentBranchLastCommit = () => {
   const branch = execSync("git rev-parse --abbrev-ref HEAD").toString().trim();
-  const commit = execSync(`git log --pretty=format:'%h' -n 1 ${branch}`)
-    .toString()
-    .trim();
+  const commit = execSync(`git log --pretty=format:'%h' -n 1 ${branch}`).toString().trim();
   return commit.slice(0, 8);
 };
 
 // detail
 async function getBranchDetail(prefix) {
-  const customDetailInput = await handleManualInput(
-    "customDetailInput",
-    "请输入分支功能描述，不需要输入时间哦："
-  );
+  const customDetailInput = await handleManualInput("customDetailInput", "请输入分支功能描述，不需要输入时间哦：");
   console.log(`你输入的分支功能描述: ${customDetailInput}`);
   return customDetailInput;
 }
@@ -112,9 +104,7 @@ const getCurrentTime = () => {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
-  const timeStr = `${year}${month.toString().padStart(2, "0")}${day
-    .toString()
-    .padStart(2, "0")}`;
+  const timeStr = `${year}${month.toString().padStart(2, "0")}${day.toString().padStart(2, "0")}`;
   return timeStr;
 };
 
@@ -139,7 +129,6 @@ async function main() {
   console.log(`Commit: ${commit}`);
   console.log(`Detail: ${detail}`);
   console.log(`Time: ${time}`);
-
   createNewBranch(prefix, username, commit, detail, time);
 }
 

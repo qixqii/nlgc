@@ -3,11 +3,18 @@
   "version": "1.0.3",
   "description": "A CLI tool for git create new branch",
   "main": "main.js",
-  "type": "module",
   "bin": {
-    "nlgc": "main.js"
+    "nlgc": "dist/main.js"
   },
   "dependencies": {
-    "inquirer": "^9.0.0"
+    "inquirer": "^8.2.6"
+  },
+  "scripts": {
+    "build": "babel main.js -d dist"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.25.9",
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0"
   }
 }
