@@ -6,41 +6,41 @@ const {
   execSync
 } = require("child_process");
 
-// 1. 定义 功能
-// [‘feature’, ‘release’, ‘hofix’]
+// 添加配置对象统一管理
+const CONFIG = {
+  prefixChoices: [{
+    name: "dev  (功能开发)",
+    value: "dev"
+  }, {
+    name: "feature  (功能开发)",
+    value: "feature"
+  }, {
+    name: "release  (集成测试)",
+    value: "release"
+  }, {
+    name: "hotfix   (问题修复)",
+    value: "hotfix"
+  }, {
+    name: "refactor (项目重构)",
+    value: "refactor"
+  }, {
+    name: "自己输入",
+    value: "custom"
+  }],
+  usernames: ["my", "wy", "xxl", "qxq", "zl", "cyl"],
+  releaseTypes: ["master", "ent_sbux", "ent_yum", "ent_sgp", "ent_shangqi", "saas_chanel"]
+};
 
-// 2. Username: 输入
-
-// 3. Commit: node child_process 去取当前分支的最新commit 的前 8位
-
-// 4. detail: 输入 / 选择
-//    4.1 feature: 输入
-//    4.2 release: [‘master’, ‘ent’] _ time
-//    4.3 hotfix: 输入
-
-// 总的环境list [‘aws’, ‘sbux’, ‘chanel’, ‘nana’]
-
-// release/username/commit/release_projectname_20220808
-
-const prefixChoices = [{
-  name: "dev  (功能开发)",
-  value: "dev"
-}, {
-  name: "feature  (功能开发)",
-  value: "feature"
-}, {
-  name: "release  (集成测试)",
-  value: "release"
-}, {
-  name: "hotfix   (问题修复)",
-  value: "hotfix"
-}, {
-  name: "refactor (项目重构)",
-  value: "refactor"
-}, {
-  name: "自己输入",
-  value: "custom"
-}];
+// 添加错误处理工具函数
+const execSyncWithError = command => {
+  try {
+    return execSync(command).toString().trim();
+  } catch (error) {
+    console.error(`执行命令失败: ${command}`);
+    console.error(error.message);
+    process.exit(1);
+  }
+};
 
 // 封装的通用手动输入逻辑
 async function handleManualInput(questionName, message) {
@@ -58,7 +58,7 @@ async function getPrefix() {
     type: "list",
     name: "prefix",
     message: "请选择分支前缀",
-    choices: prefixChoices
+    choices: CONFIG.prefixChoices
   }]);
   if (answer1.prefix === "custom") {
     const customPrefixInput = await handleManualInput("customPrefixInput", "请手动输入前缀：");
@@ -72,22 +72,20 @@ async function getPrefix() {
 
 // username
 async function getUserName() {
-  const answer2 = await inquirer.prompt([{
+  const choices = [...CONFIG.usernames, "手动输入"];
+  const {
+    username
+  } = await inquirer.prompt([{
     type: "list",
     name: "username",
     message: "请选择用户名",
-    choices: ["my", "wy", "xxl", "qxq", "zl", "cyl", "手动输入"]
+    choices
   }]);
-
-  // 如果选择了"手动输入"，进入输入模式
-  if (answer2.question2 === "手动输入") {
-    const customNameInput = await handleManualInput("customNameInput", "请输入用户名：");
-    console.log(`你输入的用户名: ${customNameInput}`);
-    return customNameInput; // 返回用户输入的值
-  } else {
-    console.log(`你选择的用户名: ${answer2.username}`);
-    return answer2.username; // 返回选择的值
+  if (username === "手动输入") {
+    return handleManualInput("customNameInput", "请输入用户名：");
   }
+  console.log(`你选择的用户名: ${username}`);
+  return username;
 }
 
 // commit
@@ -105,7 +103,7 @@ async function getBranchDetail(prefix) {
       type: "list",
       name: "detail",
       message: "请选择分支类型",
-      choices: ["master", "ent_sbux", "ent_yum", "ent_sgp", "ent_shangqi", "saas_chanel", "手动输入"]
+      choices: CONFIG.releaseTypes
     }]);
 
     // 如果选择了"手动输入"，进入输入模式
@@ -170,44 +168,86 @@ async function getNeedTime() {
   console.log(`是否添加时间: ${answer.needTime ? "是" : "否"}`);
   return answer.needTime;
 }
-
-// 修改创建分支的函数
-const createNewBranch = (prefix, username, commit, detail, time, separator, needTime) => {
-  let branchName;
-  const mainParts = [prefix, username, commit, detail];
-
-  // 先用分隔符连接主要部分
-  branchName = mainParts.join(separator);
-
-  // 如果需要时间，添加时间
-  if (needTime) {
-    branchName = `${branchName}_${time}`;
+class BranchNameBuilder {
+  constructor() {
+    this.parts = {};
   }
-  execSync(`git checkout -b ${branchName}`);
-  console.log(`New branch created: ${branchName}`);
-};
+  setPart(key, value) {
+    this.parts[key] = value;
+    return this;
+  }
+  build(separator, needTime) {
+    const {
+      prefix,
+      username,
+      commit,
+      detail,
+      time
+    } = this.parts;
+    const mainParts = [prefix, username, commit, detail];
+    let branchName = mainParts.join(separator);
+    if (needTime) {
+      branchName = `${branchName}_${time}`;
+    }
+    return branchName;
+  }
+}
 
 // 修改主函数
 async function main() {
-  const prefix = await getPrefix();
-  const username = await getUserName();
-  const commit = await getCurrentBranchLastCommit();
-  const detail = await getBranchDetail(prefix);
-  const separator = await getSeparator();
-  const needTime = await getNeedTime();
-  const time = await getCurrentTime();
+  try {
+    const branchBuilder = new BranchNameBuilder();
 
-  // 输出最终结果
-  console.log(`Prefix: ${prefix}`);
-  console.log(`Username: ${username}`);
-  console.log(`Commit: ${commit}`);
-  console.log(`Detail: ${detail}`);
-  console.log(`Separator: ${separator}`);
-  console.log(`Need Time: ${needTime}`);
-  if (needTime) {
-    console.log(`Time: ${time}`);
+    // 收集所有信息
+    const prefix = await getPrefix();
+    const username = await getUserName();
+    const commit = execSyncWithError("git rev-parse --abbrev-ref HEAD | xargs git log --pretty=format:'%h' -n 1");
+    const detail = await getBranchDetail(prefix);
+    const separator = await getSeparator();
+    const needTime = await getNeedTime();
+    const time = getCurrentTime();
+
+    // 构建分支名
+    branchBuilder.setPart("prefix", prefix).setPart("username", username).setPart("commit", commit.slice(0, 8)).setPart("detail", detail).setPart("time", time);
+
+    // 生成分支名
+    const branchName = branchBuilder.build(separator, needTime);
+
+    // 显示确认信息
+    console.log("\n分支信息预览:");
+    console.log("-".repeat(30));
+    console.log(`前缀: ${prefix}`);
+    console.log(`用户: ${username}`);
+    console.log(`Commit: ${commit.slice(0, 8)}`);
+    console.log(`描述: ${detail}`);
+    console.log(`分隔符: ${separator}`);
+    console.log(`添加时间: ${needTime ? "是" : "否"}`);
+    if (needTime) {
+      console.log(`时间: ${time}`);
+    }
+    console.log(`最终分支名: ${branchName}`);
+    console.log("-".repeat(30));
+
+    // 确认创建
+    const {
+      confirmCreate
+    } = await inquirer.prompt([{
+      type: "confirm",
+      name: "confirmCreate",
+      message: "确认创建该分支？",
+      default: true
+    }]);
+    if (confirmCreate) {
+      execSyncWithError(`git checkout -b ${branchName}`);
+      console.log(`\n✨ 成功创建新分支: ${branchName}`);
+    } else {
+      console.log("\n已取消创建分支");
+    }
+  } catch (error) {
+    console.error("\n❌ 创建分支失败:");
+    console.error(error.message);
+    process.exit(1);
   }
-  createNewBranch(prefix, username, commit, detail, time, separator, needTime);
 }
 
 // 运行主函数
