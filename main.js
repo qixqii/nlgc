@@ -20,9 +20,11 @@ const { execSync } = require("child_process");
 // release/username/commit/release_projectname_20220808
 
 const prefixChoices = [
+  { name: "dev  (功能开发)", value: "dev" },
   { name: "feature  (功能开发)", value: "feature" },
   { name: "release  (集成测试)", value: "release" },
   { name: "hotfix   (问题修复)", value: "hotfix" },
+  { name: "refactor (项目重构)", value: "refactor" },
   { name: "自己输入", value: "custom" },
 ];
 
@@ -69,11 +71,11 @@ async function getUserName() {
       type: "list",
       name: "username",
       message: "请选择用户名",
-      choices: ["my", "wy", "xxl", "qxq", "zl", "手动输入"],
+      choices: ["my", "wy", "xxl", "qxq", "zl", "cyl", "手动输入"],
     },
   ]);
 
-  // 如果选择了“手动输入”，进入输入模式
+  // 如果选择了"手动输入"，进入输入模式
   if (answer2.question2 === "手动输入") {
     const customNameInput = await handleManualInput(
       "customNameInput",
@@ -99,14 +101,7 @@ const getCurrentBranchLastCommit = () => {
 // detail
 async function getBranchDetail(prefix) {
   console.log("prefix", prefix);
-  if (["feature"].includes(prefix)) {
-    const customDetailInput = await handleManualInput(
-      "customDetailInput",
-      "请输入分支功能描述，不需要输入时间哦："
-    );
-    console.log(`你输入的分支功能描述: ${customDetailInput}`);
-    return customDetailInput;
-  } else if (["release"].includes(prefix)) {
+  if (["release"].includes(prefix)) {
     const detailAnswer = await inquirer.prompt([
       {
         type: "list",
@@ -124,18 +119,26 @@ async function getBranchDetail(prefix) {
       },
     ]);
 
-    // 如果选择了“手动输入”，进入输入模式
+    // 如果选择了"手动输入"，进入输入模式
     if (detailAnswer.detail === "手动输入") {
       const customDetailInput = await handleManualInput(
         "customDetailInput",
         "请输入分支类型："
       );
       console.log(`你输入的分支类型: ${customDetailInput}`);
-      return customDetailInput; // 返回用户输入的值
+      return customDetailInput;
     } else {
       console.log(`你选择的分支类型: ${detailAnswer.detail}`);
-      return detailAnswer.detail; // 返回选择的值
+      return detailAnswer.detail;
     }
+  } else {
+    // 对于其他所有类型的分支，都需要输入功能描述
+    const customDetailInput = await handleManualInput(
+      "customDetailInput",
+      "请输入分支功能描述："
+    );
+    console.log(`你输入的分支功能描述: ${customDetailInput}`);
+    return customDetailInput;
   }
 }
 
@@ -151,19 +154,65 @@ const getCurrentTime = () => {
   return timeStr;
 };
 
-// 创建新分支
-const createNewBranch = (prefix, username, commit, detail, time) => {
-  const branchName = `${prefix}/${username}/${commit}/${detail}_${time}`;
+// 添加新函数：选择分隔符
+async function getSeparator() {
+  const answer = await inquirer.prompt([
+    {
+      type: "list",
+      name: "separator",
+      message: "请选择分隔符",
+      choices: [
+        { name: "使用斜杠 (/)", value: "/" },
+        { name: "使用下划线 (_)", value: "_" },
+      ],
+    },
+  ]);
+  console.log(`你选择的分隔符: ${answer.separator}`);
+  return answer.separator;
+}
+
+// 修改函数名和逻辑
+async function getNeedTime() {
+  const answer = await inquirer.prompt([
+    {
+      type: "list",
+      name: "needTime",
+      message: "是否需要添加时间？",
+      choices: [
+        { name: "需要", value: true },
+        { name: "不需要", value: false },
+      ],
+    },
+  ]);
+  console.log(`是否添加时间: ${answer.needTime ? "是" : "否"}`);
+  return answer.needTime;
+}
+
+// 修改创建分支的函数
+const createNewBranch = (prefix, username, commit, detail, time, separator, needTime) => {
+  let branchName;
+  const mainParts = [prefix, username, commit, detail];
+  
+  // 先用分隔符连接主要部分
+  branchName = mainParts.join(separator);
+  
+  // 如果需要时间，添加时间
+  if (needTime) {
+    branchName = `${branchName}_${time}`;
+  }
+  
   execSync(`git checkout -b ${branchName}`);
   console.log(`New branch created: ${branchName}`);
 };
 
-// 主函数
+// 修改主函数
 async function main() {
   const prefix = await getPrefix();
   const username = await getUserName();
   const commit = await getCurrentBranchLastCommit();
   const detail = await getBranchDetail(prefix);
+  const separator = await getSeparator();
+  const needTime = await getNeedTime();
   const time = await getCurrentTime();
 
   // 输出最终结果
@@ -171,9 +220,13 @@ async function main() {
   console.log(`Username: ${username}`);
   console.log(`Commit: ${commit}`);
   console.log(`Detail: ${detail}`);
-  console.log(`Time: ${time}`);
+  console.log(`Separator: ${separator}`);
+  console.log(`Need Time: ${needTime}`);
+  if (needTime) {
+    console.log(`Time: ${time}`);
+  }
 
-  createNewBranch(prefix, username, commit, detail, time);
+  createNewBranch(prefix, username, commit, detail, time, separator, needTime);
 }
 
 // 运行主函数
